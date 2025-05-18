@@ -245,6 +245,8 @@ const MAX_SCALE = 3; //Максимальное увеличение
 const MIN_SCALE = 0.5; //Минимальное уменьшение
 let lastPinchDistance = null;
 
+let strokesData = []; // Инициализируем strokesData пустым массивом
+
 // Увеличение разрешения канваса для четкости
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
@@ -256,7 +258,7 @@ function resizeCanvas() {
   canvas.style.height = `${rect.height}px`;
 
   // Перерисовываем канвас при ресайзе (важно для зума и перемещения)
-  redrawCanvas();
+  // redrawCanvas(); Убираем вызов отсюда
 }
 
 resizeCanvas();
@@ -333,11 +335,9 @@ function redrawCanvas() {
     ctx.scale(scale, scale); // Применяем масштабирование
 
     // Перерисовываем все штрихи (strokes) из сохраненных данных (предполагается, что у вас есть strokesData)
-    if (strokesData) {
-        strokesData.forEach(stroke => {
-            drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool);
-        });
-    }
+    strokesData.forEach(stroke => {
+        drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool);
+    });
     ctx.restore(); // Восстанавливаем состояние контекста
 }
 
@@ -457,7 +457,7 @@ canvas.addEventListener('touchend', (e) => {
 
 // WebSocket
 const ws = new WebSocket('wss://itana.pw:6006');
-let strokesData = []; // Массив для хранения данных о штрихах
+
 
 ws.addEventListener('open', () => {
   console.log('WebSocket подключен');
@@ -485,6 +485,9 @@ ws.addEventListener('message', event => {
   }
 });
 
+let lastMidPointX = 0;
+let lastMidPointY = 0;
+
 // Обработка сообщений
 function handleMessage(data) {
     switch (data.type) {
@@ -496,7 +499,7 @@ function handleMessage(data) {
         case 'initialData':
             clearCanvas();
             strokesData = data.data; //Сохраняем полученные данные
-            redrawCanvas();
+            redrawCanvas(); // Перерисовываем канвас после получения данных
             break;
         case 'clear':
             clearCanvas();
