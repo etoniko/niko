@@ -428,44 +428,6 @@ function handleMessage(data) {
   }
 }
 </script>
-
-
-  <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const menuToggle = document.getElementById('menuToggle');
-  const toolbar = document.getElementById('toolbar');
-  const pencilButton = document.getElementById('pencilButton');
-  const eraserButton = document.getElementById('eraserButton');
-
-  // Изначально выбран карандаш
-  pencilButton.classList.add('active');
-
-  function selectTool(tool) {
-    if (tool === 'pencil') {
-      pencilButton.classList.add('active');
-      eraserButton.classList.remove('active');
-    } else if (tool === 'eraser') {
-      eraserButton.classList.add('active');
-      pencilButton.classList.remove('active');
-    }
-  }
-
-  pencilButton.addEventListener('click', () => selectTool('pencil'));
-  eraserButton.addEventListener('click', () => selectTool('eraser'));
-
-  menuToggle.addEventListener('click', () => {
-    toolbar.classList.toggle('visible');
-    menuToggle.classList.toggle('active');
-
-    // Обновляем aria-expanded для доступности
-    const expanded = menuToggle.classList.contains('active');
-    menuToggle.setAttribute('aria-expanded', expanded.toString());
-  });
-});
-
-</script>
-
-
   <script>
 document.addEventListener('DOMContentLoaded', () => {
   const menuToggle = document.getElementById('menuToggle');
