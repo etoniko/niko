@@ -237,12 +237,30 @@ let lastX = 0;
 let lastY = 0;
 let currentColor = '#000000';
 
+// Увеличение разрешения канваса для четкости
 function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  // Получаем физическое разрешение экрана
+  const dpr = window.devicePixelRatio || 1;
+
+  // Получаем размеры канваса из CSS (например, 100% ширины и высоты)
+  const rect = canvas.getBoundingClientRect();
+
+  // Устанавливаем фактические размеры канваса, умножая на dpr
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+
+  // Масштабируем контекст, чтобы нарисованное соответствовало координатам
+  ctx.scale(dpr, dpr);
+
+  // Стилизуем канвас в соответствии с CSS размерами
+  canvas.style.width = `${rect.width}px`;
+  canvas.style.height = `${rect.height}px`;
 }
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+
+
+resizeCanvas(); // Инициализация при загрузке страницы
+window.addEventListener('resize', resizeCanvas); // Обновление при изменении размера окна
+
 
 // Инструменты
 pencilButton.addEventListener('click', () => {
@@ -262,7 +280,11 @@ colorPicker.addEventListener('input', (e) => {
 // Рисование линии
 function drawLine(x1, y1, x2, y2, color, tool = 'pencil') {
   ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
-  ctx.lineWidth = tool === 'eraser' ? 20 : 2;
+
+  //  Адаптивная толщина линии. Меньше на мобильных
+  const lineWidth = window.innerWidth < 768 ? (tool === 'eraser' ? 10 : 1) : (tool === 'eraser' ? 20 : 2);
+  ctx.lineWidth = lineWidth;
+
   ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(x1, y1);
@@ -272,13 +294,26 @@ function drawLine(x1, y1, x2, y2, color, tool = 'pencil') {
 
 // Очистка
 function clearCanvas() {
+  const dpr = window.devicePixelRatio || 1; //Убеждаемся что dpr задан
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 // Отправка по WebSocket
 function sendDraw(x1, y1, x2, y2, color, tool) {
+  // Получаем физическое разрешение экрана
+  const dpr = window.devicePixelRatio || 1;
+
+  // Отправляем координаты, деленные на dpr
   if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'draw', x1, y1, x2, y2, color, tool }));
+    ws.send(JSON.stringify({
+      type: 'draw',
+      x1: x1 / dpr,
+      y1: y1 / dpr,
+      x2: x2 / dpr,
+      y2: y2 / dpr,
+      color,
+      tool
+    }));
   }
 }
 
@@ -286,23 +321,27 @@ function sendDraw(x1, y1, x2, y2, color, tool) {
 function getTouchPos(touchEvent) {
   const rect = canvas.getBoundingClientRect();
   return {
-    x: touchEvent.touches[0].clientX - rect.left,
-    y: touchEvent.touches[0].clientY - rect.top
+    x: (touchEvent.touches[0].clientX - rect.left),
+    y: (touchEvent.touches[0].clientY - rect.top)
   };
 }
 
 // Мышь
 canvas.addEventListener('mousedown', (e) => {
   isDrawing = true;
-  lastX = e.clientX;
-  lastY = e.clientY;
+  const rect = canvas.getBoundingClientRect();
+    lastX = e.clientX - rect.left;
+    lastY = e.clientY - rect.top;
 });
 canvas.addEventListener('mousemove', (e) => {
   if (!isDrawing) return;
-  drawLine(lastX, lastY, e.clientX, e.clientY, currentColor, currentTool);
-  sendDraw(lastX, lastY, e.clientX, e.clientY, currentColor, currentTool);
-  lastX = e.clientX;
-  lastY = e.clientY;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  drawLine(lastX, lastY, x, y, currentColor, currentTool);
+  sendDraw(lastX, lastY, x, y, currentColor, currentTool);
+  lastX = x;
+  lastY = y;
 });
 canvas.addEventListener('mouseup', () => {
   isDrawing = false;
@@ -362,14 +401,17 @@ ws.addEventListener('message', event => {
 
 // Обработка сообщений
 function handleMessage(data) {
+  // Получаем физическое разрешение экрана
+  const dpr = window.devicePixelRatio || 1;
+
   switch (data.type) {
     case 'draw':
-      drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.tool);
-      break;
+        drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.tool);
+        break;
     case 'initialData':
       clearCanvas();
       data.data.forEach(stroke => {
-        drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool);
+          drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool);
       });
       break;
     case 'clear':
