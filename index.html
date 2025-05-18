@@ -1,13 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-<meta name="regru-verification" content="dc2872d32fe159b6814597bf12a2c9393bfdbd41ae9f6c92a495ebf4ef85a62b" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>niko.pw</title>
   <link rel="icon" href="favicon.png">
-  <title>Niko.pw</title>
-  <link rel="stylesheet" href="https://public.codepenassets.com/css/reset-2.0.min.css">
-<link rel="stylesheet" href="./style.css">
-  <!-- Yandex.RTB -->
+    <!-- Yandex.RTB -->
 <script>window.yaContextCb=window.yaContextCb||[]</script>
 <script src="https://yandex.ru/ads/system/context.js" async></script>
 <!-- Yandex.RTB R-A-15532743-1 -->
@@ -20,107 +18,410 @@ window.yaContextCb.push(() => {
     })
 })
 </script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      touch-action: none;
+      position: relative;
+      color: #222;
+    }
+
+    /* Кнопка меню - минималистичный гамбургер */
+    #menuToggle {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 1100;
+      width: 36px;
+      height: 36px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: transform 0.3s ease;
+    }
+    /* Три полоски гамбургера */
+    #menuToggle span {
+      display: block;
+      width: 24px;
+      height: 2.5px;
+      background-color: #42aaff;
+      border-radius: 1.5px;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    #menuToggle span::before,
+    #menuToggle span::after {
+      content: "";
+      position: absolute;
+      width: 24px;
+      height: 2.5px;
+      background-color: #42aaff;
+      border-radius: 1.5px;
+      left: 0;
+      transition: all 0.3s ease;
+    }
+    #menuToggle span::before {
+      top: -8px;
+    }
+    #menuToggle span::after {
+      top: 8px;
+    }
+
+    /* Анимация кнопки при активном состоянии (крестик) */
+    #menuToggle.active span {
+      background-color: transparent;
+    }
+    #menuToggle.active span::before {
+      top: 0;
+      transform: rotate(45deg);
+    }
+    #menuToggle.active span::after {
+      top: 0;
+      transform: rotate(-45deg);
+    }
+
+    /* Панель инструментов - выезжает слева */
+    #toolbar {
+      position: fixed;
+      top: 60px;
+      left: 12px;
+      z-index: 1050;
+      background-color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      gap: 14px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgb(0 0 0 / 0.12);
+      transform: translateX(-140%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      align-items: center;
+    }
+    #toolbar.visible {
+      transform: translateX(0);
+    }
+
+    .tool-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 8px;
+      color: #555;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+    .tool-button svg {
+      width: 24px;
+      height: 24px;
+    }
+    .tool-button:hover {
+      background-color: #ddeeff;
+      color: #42aaff;
+    }
+    .tool-button.active {
+      background-color: #42aaff;
+      color: #fff;
+    }
+
+    #colorPicker {
+      width: 36px;
+      height: 32px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 8px #42aaffaa;
+      transition: box-shadow 0.3s ease;
+      padding: 0;
+    }
+    #colorPicker:hover {
+      box-shadow: 0 0 14px #42aaffdd;
+    }
+
+    canvas {
+      flex-grow: 1;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      background-color: #fff;
+      touch-action: none;
+    }
+	#online-status {
+  position: absolute;
+  top: 15px;
+  right: 10px;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+
+  background: #42aaffad;
+  padding: 4px 10px;
+  border-radius: 12px;
+  user-select: none;
+}
+
+#online-status svg {
+  stroke: white;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+#online-count {
+  min-width: 18px;
+  text-align: center;
+}
+
+  </style>
 </head>
 <body>
-<!-- partial:index.partial.html -->
-<div class="info">
-  <button class="btn-sound"></button>
-  <audio id="theme-song" src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/225363/smb3-theme.mp3" loop="loop"></audio>
-  <div class="score">
-    <div class="turns">Turns: <span>2</span></div>
-    <div class="attempts">Attempts: <span>0</span></div>
-    <div class="wins">Wins: <span>0</span></div>
-  </div>
-</div>
-<main>
-  <div class="card" data-type="flower" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="mushroom" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="star" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="flower" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="mushroom" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="star" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="flower" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="mushroom" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="star" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="flower" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="mushroom" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="star" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="1up" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="coin10" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="coin20" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="1up" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="coin10" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-  <div class="card" data-type="coin20" data-matched="false">
-    <div class="front"></div>
-    <div class="back"></div>
-  </div>
-</main>
-<div class="success">
-  <div class="success-icon" data-type="mushroom">
-    <div class="front"></div>
-  </div>
-  <h2 class="success-message">Nice work!    </h2>
-  <div class="score">
-    <div class="turns">Turns <span>2</span></div>
-    <div class="attempts">Attempts <span>0</span></div>
-    <div class="wins">Wins <span>0</span></div>
-    <div class="attempts-overall">Attempts Overall <span>0</span></div>
-  </div>
-  <button class="btn-continue">Continue</button>
-</div>
-<!-- partial -->
-  <script src='https://code.jquery.com/jquery-2.2.4.min.js'></script><script  src="./script.js"></script>
+  <button id="menuToggle" aria-label="Открыть меню" aria-expanded="false" aria-controls="toolbar">
+    <span></span>
+  </button>
 
+  <div id="toolbar" class="hidden" role="toolbar" aria-label="Панель инструментов">
+    <button id="pencilButton" class="tool-button" title="Карандаш" aria-pressed="true" aria-label="Карандаш">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+      </svg>
+    </button>
+    <button id="eraserButton" class="tool-button" title="Ластик" aria-pressed="false" aria-label="Ластик">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M16.24 3.56L7.41 12.39 4 9l-1.5 1.5L9 16.5l7.73-7.74z"/>
+      </svg>
+    </button>
+    <input type="color" id="colorPicker" value="#000000" title="Выбор цвета" aria-label="Выбор цвета" />
+  </div>
+  
+<div id="online-status">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" viewBox="0 0 24 24">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+  <span id="online-count">0</span>
+</div>
+
+
+  <canvas id="drawingCanvas"></canvas>
+  
+<script>
+const canvas = document.getElementById('drawingCanvas');
+const ctx = canvas.getContext('2d');
+const pencilButton = document.getElementById('pencilButton');
+const eraserButton = document.getElementById('eraserButton');
+const colorPicker = document.getElementById('colorPicker');
+
+let currentTool = 'pencil';
+let isDrawing = false;
+let lastX = 0;
+let lastY = 0;
+let currentColor = '#000000';
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// Инструменты
+pencilButton.addEventListener('click', () => {
+  currentTool = 'pencil';
+  pencilButton.classList.add('active');
+  eraserButton.classList.remove('active');
+});
+eraserButton.addEventListener('click', () => {
+  currentTool = 'eraser';
+  eraserButton.classList.add('active');
+  pencilButton.classList.remove('active');
+});
+colorPicker.addEventListener('input', (e) => {
+  currentColor = e.target.value;
+});
+
+// Рисование линии
+function drawLine(x1, y1, x2, y2, color, tool = 'pencil') {
+  ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
+  ctx.lineWidth = tool === 'eraser' ? 20 : 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+// Очистка
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// Отправка по WebSocket
+function sendDraw(x1, y1, x2, y2, color, tool) {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'draw', x1, y1, x2, y2, color, tool }));
+  }
+}
+
+// Касания
+function getTouchPos(touchEvent) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: touchEvent.touches[0].clientX - rect.left,
+    y: touchEvent.touches[0].clientY - rect.top
+  };
+}
+
+// Мышь
+canvas.addEventListener('mousedown', (e) => {
+  isDrawing = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
+canvas.addEventListener('mousemove', (e) => {
+  if (!isDrawing) return;
+  drawLine(lastX, lastY, e.clientX, e.clientY, currentColor, currentTool);
+  sendDraw(lastX, lastY, e.clientX, e.clientY, currentColor, currentTool);
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
+canvas.addEventListener('mouseup', () => {
+  isDrawing = false;
+});
+canvas.addEventListener('mouseout', () => {
+  isDrawing = false;
+});
+
+// Тач
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = getTouchPos(e);
+  isDrawing = true;
+  lastX = touch.x;
+  lastY = touch.y;
+});
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const touch = getTouchPos(e);
+  drawLine(lastX, lastY, touch.x, touch.y, currentColor, currentTool);
+  sendDraw(lastX, lastY, touch.x, touch.y, currentColor, currentTool);
+  lastX = touch.x;
+  lastY = touch.y;
+});
+canvas.addEventListener('touchend', () => {
+  isDrawing = false;
+});
+
+// WebSocket
+const ws = new WebSocket('wss://itana.pw:6006');
+
+ws.addEventListener('open', () => {
+  console.log('WebSocket подключен');
+});
+
+// При получении сообщения от сервера
+ws.addEventListener('message', event => {
+  if (typeof event.data === 'string') {
+    // строка — парсим JSON сразу
+    handleMessage(JSON.parse(event.data));
+  } else if (event.data instanceof Blob) {
+    // blob — читаем как текст, затем парсим JSON
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        handleMessage(data);
+      } catch (e) {
+        console.error('Ошибка парсинга JSON из Blob:', e);
+      }
+    };
+    reader.readAsText(event.data);
+  } else {
+    console.warn('Получен неизвестный тип данных:', event.data);
+  }
+});
+
+// Обработка сообщений
+function handleMessage(data) {
+  switch (data.type) {
+    case 'draw':
+      drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.tool);
+      break;
+    case 'initialData':
+      clearCanvas();
+      data.data.forEach(stroke => {
+        drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool);
+      });
+      break;
+    case 'clear':
+      clearCanvas();
+      break;
+    case 'userCount':
+      const onlineElement = document.getElementById('online-count');
+      if (onlineElement) {
+        onlineElement.textContent = data.count;
+      }
+      break;
+    default:
+      console.warn("Неизвестный тип сообщения:", data.type);
+  }
+}
+</script>
+
+
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+  const menuToggle = document.getElementById('menuToggle');
+  const toolbar = document.getElementById('toolbar');
+  const pencilButton = document.getElementById('pencilButton');
+  const eraserButton = document.getElementById('eraserButton');
+
+  // Изначально выбран карандаш
+  pencilButton.classList.add('active');
+
+  function selectTool(tool) {
+    if (tool === 'pencil') {
+      pencilButton.classList.add('active');
+      eraserButton.classList.remove('active');
+    } else if (tool === 'eraser') {
+      eraserButton.classList.add('active');
+      pencilButton.classList.remove('active');
+    }
+  }
+
+  pencilButton.addEventListener('click', () => selectTool('pencil'));
+  eraserButton.addEventListener('click', () => selectTool('eraser'));
+
+  menuToggle.addEventListener('click', () => {
+    toolbar.classList.toggle('visible');
+    menuToggle.classList.toggle('active');
+
+    // Обновляем aria-expanded для доступности
+    const expanded = menuToggle.classList.contains('active');
+    menuToggle.setAttribute('aria-expanded', expanded.toString());
+  });
+});
+
+
+  </script>
 </body>
 </html>
