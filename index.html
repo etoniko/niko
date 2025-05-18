@@ -237,29 +237,30 @@ let lastX = 0;
 let lastY = 0;
 let currentColor = '#000000';
 
+//Zoom and pan
+let scale = 1;
+let translateX = 0;
+let translateY = 0;
+const MAX_SCALE = 3; //Максимальное увеличение
+const MIN_SCALE = 0.5; //Минимальное уменьшение
+let lastPinchDistance = null;
+
 // Увеличение разрешения канваса для четкости
 function resizeCanvas() {
-  // Получаем физическое разрешение экрана
   const dpr = window.devicePixelRatio || 1;
-
-  // Получаем размеры канваса из CSS (например, 100% ширины и высоты)
   const rect = canvas.getBoundingClientRect();
-
-  // Устанавливаем фактические размеры канваса, умножая на dpr
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
-
-  // Масштабируем контекст, чтобы нарисованное соответствовало координатам
   ctx.scale(dpr, dpr);
-
-  // Стилизуем канвас в соответствии с CSS размерами
   canvas.style.width = `${rect.width}px`;
   canvas.style.height = `${rect.height}px`;
+
+  // Перерисовываем канвас при ресайзе (важно для зума и перемещения)
+  redrawCanvas();
 }
 
-
-resizeCanvas(); // Инициализация при загрузке страницы
-window.addEventListener('resize', resizeCanvas); // Обновление при изменении размера окна
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 
 // Инструменты
@@ -277,14 +278,12 @@ colorPicker.addEventListener('input', (e) => {
   currentColor = e.target.value;
 });
 
+
 // Рисование линии
 function drawLine(x1, y1, x2, y2, color, tool = 'pencil') {
   ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
-
-  //  Адаптивная толщина линии. Меньше на мобильных
   const lineWidth = window.innerWidth < 768 ? (tool === 'eraser' ? 10 : 1) : (tool === 'eraser' ? 20 : 2);
   ctx.lineWidth = lineWidth;
-
   ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(x1, y1);
@@ -294,23 +293,21 @@ function drawLine(x1, y1, x2, y2, color, tool = 'pencil') {
 
 // Очистка
 function clearCanvas() {
-  const dpr = window.devicePixelRatio || 1; //Убеждаемся что dpr задан
+  const dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 // Отправка по WebSocket
 function sendDraw(x1, y1, x2, y2, color, tool) {
-  // Получаем физическое разрешение экрана
   const dpr = window.devicePixelRatio || 1;
 
-  // Отправляем координаты, деленные на dpr
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({
       type: 'draw',
-      x1: x1 / dpr,
-      y1: y1 / dpr,
-      x2: x2 / dpr,
-      y2: y2 / dpr,
+      x1: (x1 - translateX) / scale, // Корректировка координат для зума и перемещения
+      y1: (y1 - translateY) / scale,
+      x2: (x2 - translateX) / scale,
+      y2: (y2 - translateY) / scale,
       color,
       tool
     }));
@@ -321,24 +318,43 @@ function sendDraw(x1, y1, x2, y2, color, tool) {
 function getTouchPos(touchEvent) {
   const rect = canvas.getBoundingClientRect();
   return {
-    x: (touchEvent.touches[0].clientX - rect.left),
-    y: (touchEvent.touches[0].clientY - rect.top)
+    x: touchEvent.touches[0].clientX - rect.left,
+    y: touchEvent.touches[0].clientY - rect.top
   };
 }
+
+
+// Функция перерисовки всего канваса с учетом зума и перемещения
+function redrawCanvas() {
+    clearCanvas(); // Очищаем канвас
+
+    ctx.save(); // Сохраняем текущее состояние контекста
+    ctx.translate(translateX, translateY); // Применяем перемещение
+    ctx.scale(scale, scale); // Применяем масштабирование
+
+    // Перерисовываем все штрихи (strokes) из сохраненных данных (предполагается, что у вас есть strokesData)
+    if (strokesData) {
+        strokesData.forEach(stroke => {
+            drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool);
+        });
+    }
+    ctx.restore(); // Восстанавливаем состояние контекста
+}
+
 
 // Мышь
 canvas.addEventListener('mousedown', (e) => {
   isDrawing = true;
   const rect = canvas.getBoundingClientRect();
-    lastX = e.clientX - rect.left;
-    lastY = e.clientY - rect.top;
+  lastX = e.clientX - rect.left;
+  lastY = e.clientY - rect.top;
 });
 canvas.addEventListener('mousemove', (e) => {
   if (!isDrawing) return;
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
-  drawLine(lastX, lastY, x, y, currentColor, currentTool);
+  drawLine((lastX - translateX) / scale, (lastY - translateY) / scale, (x - translateX) / scale, (y - translateY) / scale, currentColor, currentTool);
   sendDraw(lastX, lastY, x, y, currentColor, currentTool);
   lastX = x;
   lastY = y;
@@ -352,26 +368,96 @@ canvas.addEventListener('mouseout', () => {
 
 // Тач
 canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  const touch = getTouchPos(e);
-  isDrawing = true;
-  lastX = touch.x;
-  lastY = touch.y;
+    e.preventDefault();
+    if (e.touches.length === 1) {
+        // Одиночное касание - рисование
+        const touch = getTouchPos(e);
+        isDrawing = true;
+        lastX = touch.x;
+        lastY = touch.y;
+    } else if (e.touches.length === 2) {
+        // Два касания - зум и перемещение
+        lastPinchDistance = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+    }
 });
+
 canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  const touch = getTouchPos(e);
-  drawLine(lastX, lastY, touch.x, touch.y, currentColor, currentTool);
-  sendDraw(lastX, lastY, touch.x, touch.y, currentColor, currentTool);
-  lastX = touch.x;
-  lastY = touch.y;
+    e.preventDefault();
+    if (e.touches.length === 1) {
+        // Одиночное касание - рисование
+        if (!isDrawing) return;
+        const touch = getTouchPos(e);
+        drawLine((lastX - translateX) / scale, (lastY - translateY) / scale, (touch.x - translateX) / scale, (touch.y - translateY) / scale, currentColor, currentTool);
+        sendDraw(lastX, lastY, touch.x, touch.y, currentColor, currentTool);
+        lastX = touch.x;
+        lastY = touch.y;
+    } else if (e.touches.length === 2) {
+        // Два касания - зум и перемещение
+        const currentPinchDistance = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+
+        // Zoom
+        if (lastPinchDistance !== null) {
+            const scaleFactor = currentPinchDistance / lastPinchDistance;
+            scale *= scaleFactor;
+            scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));  //Ограничение зума
+
+            //Центр зума (середина между пальцами)
+             const zoomCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - canvas.getBoundingClientRect().left;
+             const zoomCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - canvas.getBoundingClientRect().top;
+            //Корректировка перемещения (чтобы зум был в центре)
+            translateX = zoomCenterX - (zoomCenterX - translateX) * scaleFactor;
+            translateY = zoomCenterY - (zoomCenterY - translateY) * scaleFactor;
+
+        }
+
+        //Pan (перемещение)
+        const touch1 = getTouchPos(e);
+        const touch2 = {
+            x: e.touches[1].clientX - canvas.getBoundingClientRect().left,
+            y: e.touches[1].clientY - canvas.getBoundingClientRect().top,
+        };
+
+        translateX += (touch1.x + touch2.x) / 2 - lastMidPointX;
+        translateY += (touch1.y + touch2.y) / 2 - lastMidPointY;
+
+        lastMidPointX = (touch1.x + touch2.x) / 2;
+        lastMidPointY = (touch1.y + touch2.y) / 2;
+
+        //Ограничение перемещения
+        const canvasRect = canvas.getBoundingClientRect();
+        const contentWidth = canvasRect.width * scale;
+        const contentHeight = canvasRect.height * scale;
+
+        const minTranslateX = canvasRect.width - contentWidth;
+        const minTranslateY = canvasRect.height - contentHeight;
+
+        translateX = Math.max(minTranslateX, Math.min(0, translateX));
+        translateY = Math.max(minTranslateY, Math.min(0, translateY));
+
+
+        lastPinchDistance = currentPinchDistance; // Обновляем расстояние
+        redrawCanvas();  // Перерисовываем канвас после зума и перемещения
+
+    }
 });
-canvas.addEventListener('touchend', () => {
-  isDrawing = false;
+
+canvas.addEventListener('touchend', (e) => {
+    isDrawing = false;
+    if (e.touches.length < 2) {
+        lastPinchDistance = null; // Сбрасываем расстояние между пальцами
+    }
 });
+
 
 // WebSocket
 const ws = new WebSocket('wss://itana.pw:6006');
+let strokesData = []; // Массив для хранения данных о штрихах
 
 ws.addEventListener('open', () => {
   console.log('WebSocket подключен');
@@ -401,32 +487,32 @@ ws.addEventListener('message', event => {
 
 // Обработка сообщений
 function handleMessage(data) {
-  // Получаем физическое разрешение экрана
-  const dpr = window.devicePixelRatio || 1;
-
-  switch (data.type) {
-    case 'draw':
-        drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.tool);
-        break;
-    case 'initialData':
-      clearCanvas();
-      data.data.forEach(stroke => {
-          drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool);
-      });
-      break;
-    case 'clear':
-      clearCanvas();
-      break;
-    case 'userCount':
-      const onlineElement = document.getElementById('online-count');
-      if (onlineElement) {
-        onlineElement.textContent = data.count;
-      }
-      break;
-    default:
-      console.warn("Неизвестный тип сообщения:", data.type);
-  }
+    switch (data.type) {
+        case 'draw':
+            //Сохраняем данные о штрихе и перерисовываем
+            strokesData.push(data);
+            drawLine(data.x1 * scale + translateX, data.y1 * scale + translateY, data.x2 * scale + translateX, data.y2 * scale + translateY, data.color, data.tool);
+            break;
+        case 'initialData':
+            clearCanvas();
+            strokesData = data.data; //Сохраняем полученные данные
+            redrawCanvas();
+            break;
+        case 'clear':
+            clearCanvas();
+            strokesData = []; //Очищаем сохраненные данные
+            break;
+        case 'userCount':
+            const onlineElement = document.getElementById('online-count');
+            if (onlineElement) {
+                onlineElement.textContent = data.count;
+            }
+            break;
+        default:
+            console.warn("Неизвестный тип сообщения:", data.type);
+    }
 }
+
 </script>
 
 
