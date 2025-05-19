@@ -191,247 +191,29 @@ window.yaContextCb.push(() => {
   min-width: 18px;
   text-align: center;
 }
+#loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.7);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-family: sans-serif;
+  z-index: 10;
+  user-select: none;
+}
 
   </style>
 </head>
 <body>
+<div id="loading">Подключение к серверу...</div>
+
   <button id="menuToggle" aria-label="Открыть меню" aria-expanded="false" aria-controls="toolbar">
     <span></span>
   </button>
-
-  <div id="toolbar" class="hidden" role="toolbar" aria-label="Панель инструментов">
-    <button id="pencilButton" class="tool-button" title="Карандаш" aria-pressed="true" aria-label="Карандаш">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
-      </svg>
-    </button>
-    <button id="eraserButton" class="tool-button" title="Ластик" aria-pressed="false" aria-label="Ластик">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M16.24 3.56L7.41 12.39 4 9l-1.5 1.5L9 16.5l7.73-7.74z"/>
-      </svg>
-    </button>
-    <input type="color" id="colorPicker" value="#000000" title="Выбор цвета" aria-label="Выбор цвета" />
-  </div>
-  
-<div id="online-status">
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" viewBox="0 0 24 24">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-    <circle cx="12" cy="12" r="3"/>
-  </svg>
-  <span id="online-count">0</span>
-</div>
-
-
-  <canvas id="drawingCanvas"></canvas>
-  
-<script>
-const canvas = document.getElementById('drawingCanvas');
-const ctx = canvas.getContext('2d');
-const pencilButton = document.getElementById('pencilButton');
-const eraserButton = document.getElementById('eraserButton');
-const colorPicker = document.getElementById('colorPicker');
-
-let currentTool = 'pencil';
-let isDrawing = false;
-let lastX = 0;
-let lastY = 0;
-let currentColor = '#000000';
-
-// Увеличение разрешения канваса для четкости
-function resizeCanvas() {
-  // Получаем физическое разрешение экрана
-  const dpr = window.devicePixelRatio || 1;
-
-  // Получаем размеры канваса из CSS (например, 100% ширины и высоты)
-  const rect = canvas.getBoundingClientRect();
-
-  // Устанавливаем фактические размеры канваса, умножая на dpr
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-
-  // Масштабируем контекст, чтобы нарисованное соответствовало координатам
-  ctx.scale(dpr, dpr);
-
-  // Стилизуем канвас в соответствии с CSS размерами
-  canvas.style.width = `${rect.width}px`;
-  canvas.style.height = `${rect.height}px`;
-}
-
-
-resizeCanvas(); // Инициализация при загрузке страницы
-window.addEventListener('resize', resizeCanvas); // Обновление при изменении размера окна
-
-
-// Инструменты
-pencilButton.addEventListener('click', () => {
-  currentTool = 'pencil';
-  pencilButton.classList.add('active');
-  eraserButton.classList.remove('active');
-});
-eraserButton.addEventListener('click', () => {
-  currentTool = 'eraser';
-  eraserButton.classList.add('active');
-  pencilButton.classList.remove('active');
-});
-colorPicker.addEventListener('input', (e) => {
-  currentColor = e.target.value;
-});
-
-// Рисование линии
-function drawLine(x1, y1, x2, y2, color, tool = 'pencil') {
-  ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
-
-  //  Адаптивная толщина линии. Меньше на мобильных
-  const lineWidth = window.innerWidth < 768 ? (tool === 'eraser' ? 10 : 1) : (tool === 'eraser' ? 20 : 2);
-  ctx.lineWidth = lineWidth;
-
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-}
-
-// Очистка
-function clearCanvas() {
-  const dpr = window.devicePixelRatio || 1; //Убеждаемся что dpr задан
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-// Отправка по WebSocket
-function sendDraw(x1, y1, x2, y2, color, tool) {
-  // Получаем физическое разрешение экрана
-  const dpr = window.devicePixelRatio || 1;
-
-  // Отправляем координаты, деленные на dpr
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({
-      type: 'draw',
-      x1: x1 / dpr,
-      y1: y1 / dpr,
-      x2: x2 / dpr,
-      y2: y2 / dpr,
-      color,
-      tool
-    }));
-  }
-}
-
-// Касания
-function getTouchPos(touchEvent) {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: (touchEvent.touches[0].clientX - rect.left),
-    y: (touchEvent.touches[0].clientY - rect.top)
-  };
-}
-
-// Мышь
-canvas.addEventListener('mousedown', (e) => {
-  isDrawing = true;
-  const rect = canvas.getBoundingClientRect();
-    lastX = e.clientX - rect.left;
-    lastY = e.clientY - rect.top;
-});
-canvas.addEventListener('mousemove', (e) => {
-  if (!isDrawing) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  drawLine(lastX, lastY, x, y, currentColor, currentTool);
-  sendDraw(lastX, lastY, x, y, currentColor, currentTool);
-  lastX = x;
-  lastY = y;
-});
-canvas.addEventListener('mouseup', () => {
-  isDrawing = false;
-});
-canvas.addEventListener('mouseout', () => {
-  isDrawing = false;
-});
-
-// Тач
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  const touch = getTouchPos(e);
-  isDrawing = true;
-  lastX = touch.x;
-  lastY = touch.y;
-});
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  const touch = getTouchPos(e);
-  drawLine(lastX, lastY, touch.x, touch.y, currentColor, currentTool);
-  sendDraw(lastX, lastY, touch.x, touch.y, currentColor, currentTool);
-  lastX = touch.x;
-  lastY = touch.y;
-});
-canvas.addEventListener('touchend', () => {
-  isDrawing = false;
-});
-
-// WebSocket
-const ws = new WebSocket('wss://itana.pw:6006');
-
-ws.addEventListener('open', () => {
-  console.log('WebSocket подключен');
-});
-
-// При получении сообщения от сервера
-ws.addEventListener('message', event => {
-  if (typeof event.data === 'string') {
-    // строка — парсим JSON сразу
-    handleMessage(JSON.parse(event.data));
-  } else if (event.data instanceof Blob) {
-    // blob — читаем как текст, затем парсим JSON
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result);
-        handleMessage(data);
-      } catch (e) {
-        console.error('Ошибка парсинга JSON из Blob:', e);
-      }
-    };
-    reader.readAsText(event.data);
-  } else {
-    console.warn('Получен неизвестный тип данных:', event.data);
-  }
-});
-
-// Обработка сообщений
-function handleMessage(data) {
-  switch (data.type) {
-    case 'draw':
-      // Отрисовка на клиенте — координаты уже пришли в логических единицах
-      drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.tool);
-      break;
-
-    case 'initialData':
-      clearCanvas();
-      data.data.forEach(stroke => {
-        drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool);
-      });
-      break;
-
-    case 'clear':
-      clearCanvas();
-      break;
-
-    case 'userCount':
-      const onlineElement = document.getElementById('online-count');
-      if (onlineElement) {
-        onlineElement.textContent = data.count;
-      }
-      break;
-
-    default:
-      console.warn("Неизвестный тип сообщения:", data.type);
-  }
-}
-
-</script>
-  <script>
+    <script>
 document.addEventListener('DOMContentLoaded', () => {
   const menuToggle = document.getElementById('menuToggle');
   const toolbar = document.getElementById('toolbar');
@@ -466,5 +248,223 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   </script>
+
+  <div id="toolbar" class="hidden" role="toolbar" aria-label="Панель инструментов">
+    <button id="pencilButton" class="tool-button" title="Карандаш" aria-pressed="true" aria-label="Карандаш">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+      </svg>
+    </button>
+    <button id="eraserButton" class="tool-button" title="Ластик" aria-pressed="false" aria-label="Ластик">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M16.24 3.56L7.41 12.39 4 9l-1.5 1.5L9 16.5l7.73-7.74z"/>
+      </svg>
+    </button>
+    <input type="color" id="colorPicker" value="#000000" title="Выбор цвета" aria-label="Выбор цвета" />
+  </div>
+  
+<div id="online-status">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" viewBox="0 0 24 24">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+  <span id="online-count">0</span>
+</div>
+
+
+  <canvas id="drawingCanvas"></canvas>
+  
+<script>
+// Элемент загрузки (предполагается, что в HTML есть <div id="loading">Подключение к серверу...</div>)
+const loadingEl = document.getElementById('loading');
+
+let canDraw = false; // разрешение рисования
+
+// --- WebSocket ---
+
+const ws = new WebSocket('wss://itana.pw:6006');
+
+ws.addEventListener('open', () => {
+  console.log('WebSocket подключен');
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'getInitialData' }));
+  }
+});
+
+ws.addEventListener('message', event => {
+  if (typeof event.data === 'string') {
+    handleMessage(JSON.parse(event.data));
+  } else if (event.data instanceof Blob) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        handleMessage(JSON.parse(reader.result));
+      } catch (e) {
+        console.error('Ошибка парсинга JSON:', e);
+      }
+    };
+    reader.readAsText(event.data);
+  }
+});
+
+ws.addEventListener('close', () => {
+  console.log('WebSocket закрыт');
+  canDraw = false;
+  loadingEl.style.display = 'block';
+});
+
+ws.addEventListener('error', () => {
+  console.log('Ошибка WebSocket');
+  canDraw = false;
+  loadingEl.style.display = 'block';
+});
+
+function handleMessage(data) {
+  switch (data.type) {
+    case 'draw':
+      drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.tool);
+      break;
+    case 'initialData':
+      clearCanvas();
+      data.data.forEach(stroke =>
+        drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool)
+      );
+      // Разрешаем рисовать и скрываем загрузку
+      canDraw = true;
+      loadingEl.style.display = 'none';
+      break;
+    case 'clear':
+      clearCanvas();
+      break;
+    case 'userCount':
+      const el = document.getElementById('online-count');
+      if (el) el.textContent = data.count;
+      break;
+    default:
+      console.warn("Неизвестный тип сообщения:", data.type);
+  }
+}
+
+
+// --- Канвас и рисование ---
+
+const canvas = document.getElementById('drawingCanvas');
+const ctx = canvas.getContext('2d');
+const pencilButton = document.getElementById('pencilButton');
+const eraserButton = document.getElementById('eraserButton');
+const colorPicker = document.getElementById('colorPicker');
+
+let currentTool = 'pencil';
+let isDrawing = false;
+let lastX = 0;
+let lastY = 0;
+let currentColor = '#000000';
+let dpr = window.devicePixelRatio || 1;
+
+// Настройка канваса с учетом DPR
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = `${rect.width}px`;
+  canvas.style.height = `${rect.height}px`;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// Выбор инструмента
+pencilButton.onclick = () => setTool('pencil');
+eraserButton.onclick = () => setTool('eraser');
+function setTool(tool) {
+  currentTool = tool;
+  pencilButton.classList.toggle('active', tool === 'pencil');
+  eraserButton.classList.toggle('active', tool === 'eraser');
+}
+
+// Выбор цвета
+colorPicker.oninput = e => currentColor = e.target.value;
+
+// Рисование линии
+function drawLine(x1, y1, x2, y2, color, tool = 'pencil') {
+  ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
+  ctx.lineWidth = window.innerWidth < 768 ? (tool === 'eraser' ? 10 : 1) : (tool === 'eraser' ? 20 : 2);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+// Очистка холста
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+}
+
+// Получение координат с учетом DPR
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  if (e.touches) {
+    return {
+      x: (e.touches[0].clientX - rect.left),
+      y: (e.touches[0].clientY - rect.top)
+    };
+  } else {
+    return {
+      x: (e.clientX - rect.left),
+      y: (e.clientY - rect.top)
+    };
+  }
+}
+
+// Отправка данных рисования на сервер
+function sendDraw(x1, y1, x2, y2, color, tool) {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'draw',
+      x1, y1, x2, y2,
+      color,
+      tool
+    }));
+  }
+}
+
+// Обработчики рисования мышью и касанием с проверкой canDraw
+function startDraw(e) {
+  if (!canDraw) return;  // блокируем, если рисование запрещено
+  e.preventDefault();
+  isDrawing = true;
+  const pos = getPos(e);
+  lastX = pos.x;
+  lastY = pos.y;
+}
+function moveDraw(e) {
+  if (!isDrawing || !canDraw) return; // блокируем, если рисование запрещено
+  e.preventDefault();
+  const pos = getPos(e);
+  drawLine(lastX, lastY, pos.x, pos.y, currentColor, currentTool);
+  sendDraw(lastX, lastY, pos.x, pos.y, currentColor, currentTool);
+  lastX = pos.x;
+  lastY = pos.y;
+}
+function endDraw() {
+  if (!canDraw) return;
+  isDrawing = false;
+}
+
+// События мыши
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', moveDraw);
+canvas.addEventListener('mouseup', endDraw);
+canvas.addEventListener('mouseout', endDraw);
+
+// События касания
+canvas.addEventListener('touchstart', startDraw, { passive: false });
+canvas.addEventListener('touchmove', moveDraw, { passive: false });
+canvas.addEventListener('touchend', endDraw);
+
+</script>
 </body>
 </html>
