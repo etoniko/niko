@@ -401,32 +401,35 @@ ws.addEventListener('message', event => {
 
 // Обработка сообщений
 function handleMessage(data) {
-  // Получаем физическое разрешение экрана
-  const dpr = window.devicePixelRatio || 1;
-
   switch (data.type) {
     case 'draw':
-        drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.tool);
-        break;
+      // Отрисовка на клиенте — координаты уже пришли в логических единицах
+      drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.tool);
+      break;
+
     case 'initialData':
       clearCanvas();
       data.data.forEach(stroke => {
-          drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool);
+        drawLine(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.tool);
       });
       break;
+
     case 'clear':
       clearCanvas();
       break;
+
     case 'userCount':
       const onlineElement = document.getElementById('online-count');
       if (onlineElement) {
         onlineElement.textContent = data.count;
       }
       break;
+
     default:
       console.warn("Неизвестный тип сообщения:", data.type);
   }
 }
+
 </script>
   <script>
 document.addEventListener('DOMContentLoaded', () => {
