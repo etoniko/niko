@@ -8,49 +8,6 @@
 <meta name="description" content="Рисуйте прямо в браузере на niko.pw!  Удобная и интуитивно понятная онлайн-рисовалка от Нико Дараселиа. Никакой регистрации, просто творите!">
   <meta name="keywords" content="Нико Дараселиа, программист, разработчик, веб-разработка, JavaScript, веб-приложения, игры, портфолио, личный сайт, niko.pw, проекты, open source">
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
-<script>
-  // Инициализация VK Bridge
-  vkBridge.send('VKWebAppInit');
-
-  // Пример использования VK Bridge (получение информации о пользователе)
-  vkBridge.subscribe((e) => {
-    if (e.detail.type === 'VKWebAppGetUserInfoResult') {
-      console.log('Информация о пользователе:', e.detail.data);
-      // Здесь можно что-то сделать с полученной информацией о пользователе
-    }
-  });
-
-  function getUserInfo() {
-    vkBridge.send('VKWebAppGetUserInfo', {})
-      .then(data => {
-        console.log('Информация о пользователе (через then):', data);
-        // Здесь можно что-то сделать с полученной информацией о пользователе
-      })
-      .catch(error => {
-        console.log('Ошибка получения информации о пользователе:', error);
-        // Обработка ошибки
-      });
-  }
-
-  // Вызываем функцию получения информации о пользователе (можно сделать по кнопке или другому событию)
-  // Например, можно добавить кнопку:
-  // <button onclick="getUserInfo()">Получить информацию о пользователе</button>
-  // Но лучше, чтобы это происходило только после события VKWebAppInit.
-
-  // Примечание:  Не стоит пытаться получить информацию о пользователе сразу после VKWebAppInit.
-  //  Лучше добавить кнопку или использовать другое событие, чтобы пользователь явно выразил свое согласие.
-
-  // Более безопасный вариант:
-
-  vkBridge.subscribe((e) => {
-    if (e.detail.type === 'VKWebAppUpdateConfig') {
-      // В этот момент Bridge готов к использованию
-      // Можем вызвать getUserInfo() здесь или при наступлении другого события
-    }
-  });
-
-
-</script>
 </head>
 <style>
     body {
@@ -497,6 +454,49 @@ canvas.addEventListener('mouseout', endDraw);
 canvas.addEventListener('touchstart', startDraw, { passive: false });
 canvas.addEventListener('touchmove', moveDraw, { passive: false });
 canvas.addEventListener('touchend', endDraw);
+
+</script>
+<script>
+  // Инициализация VK Bridge
+  vkBridge.send('VKWebAppInit');
+
+  // Пример использования VK Bridge (получение информации о пользователе)
+  vkBridge.subscribe((e) => {
+    if (e.detail.type === 'VKWebAppGetUserInfoResult') {
+      console.log('Информация о пользователе:', e.detail.data);
+      // Здесь можно что-то сделать с полученной информацией о пользователе
+    }
+  });
+
+  function getUserInfo() {
+    vkBridge.send('VKWebAppGetUserInfo', {})
+      .then(data => {
+        console.log('Информация о пользователе (через then):', data);
+        // Здесь можно что-то сделать с полученной информацией о пользователе
+      })
+      .catch(error => {
+        console.log('Ошибка получения информации о пользователе:', error);
+        // Обработка ошибки
+      });
+  }
+
+  // Вызываем функцию получения информации о пользователе (можно сделать по кнопке или другому событию)
+  // Например, можно добавить кнопку:
+  // <button onclick="getUserInfo()">Получить информацию о пользователе</button>
+  // Но лучше, чтобы это происходило только после события VKWebAppInit.
+
+  // Примечание:  Не стоит пытаться получить информацию о пользователе сразу после VKWebAppInit.
+  //  Лучше добавить кнопку или использовать другое событие, чтобы пользователь явно выразил свое согласие.
+
+  // Более безопасный вариант:
+
+  vkBridge.subscribe((e) => {
+    if (e.detail.type === 'VKWebAppUpdateConfig') {
+      // В этот момент Bridge готов к использованию
+      // Можем вызвать getUserInfo() здесь или при наступлении другого события
+    }
+  });
+
 
 </script>
 </body>
